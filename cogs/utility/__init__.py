@@ -617,6 +617,7 @@ class Utility(Cog, name="utility"):
                 "You cannot set autopurge in more than 1 channel in free tier."
                 f"\nHowever [Quotient Premium]({ctx.bot.prime_link}) allows you to set autopurge in unlimited channels."
             )
+        # Removed premium restriction - unlimited autopurge channels for everyone
 
         if channel.id in self.bot.cache.autopurge_channels:
             return await ctx.error(f"**{channel}** is already an autopurge channel.")

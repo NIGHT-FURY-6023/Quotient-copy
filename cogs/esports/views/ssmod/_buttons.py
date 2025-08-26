@@ -243,6 +243,7 @@ class SaveButton(discord.ui.Button):
             if await SSVerify.filter(guild_id=self.ctx.guild.id).exists():
                 return await self.ctx.premium_mango("You need Quotient Premium to setup more than 1 ssverify.")
 
+        # Removed premium restriction - success message available to everyone
         await self.view.record.save()
         self.ctx.bot.cache.ssverify_channels.add(self.view.record.channel_id)
         await self.view.on_timeout()

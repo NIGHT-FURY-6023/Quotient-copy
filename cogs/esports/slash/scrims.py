@@ -137,17 +137,7 @@ class ScrimsSlash(commands.GroupCog, name="scrims"):
         super().__init__()
 
     async def can_use_command(self, interaction: discord.Interaction) -> bool:
-        if not any(
-            (interaction.user.guild_permissions.manage_guild, Scrim.is_ignorable(interaction.user))  # type: ignore # line guarded #25
-        ):
-            await interaction.response.send_message(
-                embed=discord.Embed(
-                    color=discord.Color.red(),
-                    description=f"You need `scrims-mod` role or `Manage-Server` permissions to use this command.",
-                )
-            )
-            return False
-
+        # Removed permission check - now available to everyone
         return True
 
     def channel_perms(self, channel: discord.TextChannel) -> bool:
@@ -260,17 +250,7 @@ class ScrimsSlash(commands.GroupCog, name="scrims"):
 
         await interaction.response.defer(thinking=True, ephemeral=False)
 
-        if not await Guild.filter(pk=interaction.guild_id, is_premium=True).exists():
-            if await Scrim.filter(guild_id=interaction.guild_id).count() >= 3:
-                return await interaction.followup.send(
-                    embed=discord.Embed(
-                        color=discord.Color.red(),
-                        description=(
-                            "You can only create 3 scrims in a server without premium.\n\n"
-                            "### Use `qpro` command to activate Quotient Pro."
-                        ),
-                    )
-                )
+        # Removed premium restriction - unlimited scrims for everyone
 
         if not self.channel_perms(registration_channel):
             return await interaction.followup.send(
