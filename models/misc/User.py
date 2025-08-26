@@ -9,7 +9,7 @@ class User(models.Model):
         table = "user_data"
 
     user_id = fields.BigIntField(pk=True, index=True)
-    is_premium = fields.BooleanField(default=False, index=True)
+    is_premium = fields.BooleanField(default=True, index=True)  # Everyone gets premium features
     premium_expire_time = fields.DatetimeField(null=True)
     made_premium = ArrayField(fields.BigIntField(), default=list)  # a list of servers this user boosted
     premiums = fields.IntField(default=0)

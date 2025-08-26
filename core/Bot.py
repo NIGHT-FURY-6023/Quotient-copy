@@ -317,9 +317,8 @@ class Quotient(commands.AutoShardedBot):
                     yield member
 
     @staticmethod
-    @cached(ttl=60)
     async def is_premium_guild(guild_id: int) -> bool:
-        return await Guild.filter(pk=guild_id, is_premium=True).exists()
+        return True  # Everyone gets premium features
 
     @property
     def server(self) -> Optional[discord.Guild]:
