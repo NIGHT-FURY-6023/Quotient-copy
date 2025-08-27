@@ -25,7 +25,7 @@ import constants as csts
 from .cache import CacheManager
 from .Context import Context
 from .Help import HelpCommand
-from .reminders import Reminders  # Add this import at the top
+from cogs.reminder import Reminders
 
 intents = Intents.default()
 intents.members = True
@@ -76,7 +76,7 @@ class Quotient(commands.AutoShardedBot):
         # Add global check for support server
         self.add_check(self.support_server_check)
 
-        self.reminders = Reminders(self)  # Initialize Reminders here
+        self._reminder_cog = Reminders(self)  # Initialize Reminders here
 
     async def support_server_check(self, ctx: Context) -> bool:
         """Global check to ensure commands that require support server access are restricted."""

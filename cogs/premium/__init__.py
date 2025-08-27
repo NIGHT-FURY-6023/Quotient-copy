@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from core import Cog, Quotient
+from datetime import datetime, timedelta
+import discord
+from discord.ext import commands
+
+from core import Cog, Quotient, Context
 from .commands import Premium 
 from .expire import deactivate_premium, extra_guild_perks, remind_guild_to_pay, remind_user_to_pay
 from .views import PremiumPurchaseBtn, PremiumView
-from models import PremiumPlan
-import discord
+from models import PremiumPlan, User
+from utils import strtime, discord_timestamp, IST
 
 __all__ = ("setup",)
 
@@ -59,18 +63,18 @@ async def setup(bot: Quotient):
     
     # Add cog
     await bot.add_cog(PremiumCog(bot))
-        
-        # Set up expiry timer
-        await self.bot.reminders.create_timer(
-            expire_time,
-            "user_premium",
-            user_id=user.id
-        )
-        
-        # Add premium role if in support server
-        if isinstance(ctx.guild, discord.Guild) and ctx.guild.id == self.bot.config.SERVER_ID:
-            member = ctx.guild.get_member(user.id)
-            if member:
+    
+    # Set up expiry timer
+    await self.bot.reminders.create_timer(
+        expire_time,
+        "user_premium",
+        user_id=user.id
+    )
+    
+    # Add premium role if in support server
+    if isinstance(ctx.guild, discord.Guild) and ctx.guild.id == self.bot.config.SERVER_ID:
+        member = ctx.guild.get_member(user.id)
+        if member:
                 try:
                     await member.add_roles(discord.Object(id=self.premium_role_id))
                 except discord.HTTPException:

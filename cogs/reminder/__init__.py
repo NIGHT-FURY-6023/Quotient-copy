@@ -11,12 +11,12 @@ from datetime import datetime, timedelta
 import asyncpg
 import discord
 
-from core import Cog
+from discord.ext import commands
 from models import Timer
 from utils import IST
 
 
-class Reminders(Cog):
+class Reminders(commands.Cog):
     """Reminders to do something."""
 
     def __init__(self, bot: Quotient):
