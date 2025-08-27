@@ -184,25 +184,48 @@ class Premium(Cog):
         embed.add_field(name="Features & Pricing", value=features_text, inline=False)
 
         # User Status Section
+        # Determine user plan type (Lifetime if premium and no expiry, Monthly if expiry present)
+        if user.is_premium:
+            if user.premium_expire_time:
+                user_plan_type = "Monthly"
+                user_expiry_text = user.premium_expire_time.strftime('%B %d, %Y')
+            else:
+                user_plan_type = "Lifetime"
+                user_expiry_text = "Never"
+        else:
+            user_plan_type = "None"
+            user_expiry_text = "N/A"
+
         user_status = (
             f"**Current Status:** {'✅ Active' if user.is_premium else '❌ Not Active'}\n"
-            f"**Expiry:** {user.premium_expire_time.strftime('%B %d, %Y') if user.is_premium and user.premium_expire_time else 'N/A'}"
+            f"**Plan:** {user_plan_type}\n"
+            f"**Expiry:** {user_expiry_text}"
         )
         embed.add_field(name="Your Premium Status", value=user_status, inline=False)
 
         # Server Status Section
-        server_status_lines = []
+        # Server Status Section
+        # Determine server plan type similarly to user
         if guild_data.is_premium:
-            server_status_lines.extend([
+            if guild_data.premium_end_time:
+                server_plan_type = "Monthly"
+                server_expiry_text = guild_data.premium_end_time.strftime('%B %d, %Y')
+            else:
+                server_plan_type = "Lifetime"
+                server_expiry_text = "Never"
+            upgraded_by = guild.get_member(guild_data.made_premium_by).mention if guild.get_member(guild_data.made_premium_by) else 'Unknown'
+            server_status_lines = [
                 "**Current Status:** ✅ Active",
-                f"**Expiry:** {guild_data.premium_end_time.strftime('%B %d, %Y') if guild_data.premium_end_time else 'Never'}",
-                f"**Upgraded by:** {guild.get_member(guild_data.made_premium_by).mention if guild.get_member(guild_data.made_premium_by) else 'Unknown'}"
-            ])
+                f"**Plan:** {server_plan_type}",
+                f"**Expiry:** {server_expiry_text}",
+                f"**Upgraded by:** {upgraded_by}"
+            ]
         else:
-            server_status_lines.extend([
+            server_status_lines = [
                 "**Current Status:** ❌ Not Active",
-                "Upgrade to unlock premium features for everyone in the server!"
-            ])
+                "Upgrade to unlock premium features for everyone in the server!",
+                "**Plan:** None"
+            ]
 
         embed.add_field(name="Server Premium Status", value="\n".join(server_status_lines), inline=False)
 
@@ -237,6 +260,31 @@ class Premium(Cog):
             await ctx_or_interaction.send(embed=embed, view=view)
         else:
             await ctx_or_interaction.response.send_message(embed=embed, view=view)
+
+        # Compact Plan Contents field (what's included in the plan)
+        plan_contents = (
+            "• Unlimited Scrims & Tournaments\n"
+            "• Custom Role Reactions\n"
+            "• Advanced Server Verification\n"
+            "• Priority Support 24/7\n"
+            "• Cancel-Claim System\n"
+            "• Exclusive Premium Role"
+        )
+
+        # Send a follow-up message with plan contents when using Interaction, or a new message for Context
+        try:
+            contents_embed = discord.Embed(
+                title="Plan Contents",
+                description=plan_contents,
+                color=discord.Color.gold()
+            )
+            if isinstance(ctx_or_interaction, Context):
+                await ctx_or_interaction.send(embed=contents_embed)
+            else:
+                await ctx_or_interaction.followup.send(embed=contents_embed)
+        except Exception:
+            # Best-effort: ignore errors sending the extra contents embed
+            pass
 
         
 

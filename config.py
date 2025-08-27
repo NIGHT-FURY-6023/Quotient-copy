@@ -45,7 +45,7 @@ EXTENSIONS = (
 )
 
 # Bot Configuration
-DISCORD_TOKEN = "MTE4NDA4NzUzNzQ4OTI4NTE2MA.GFwcBG.lpbRBIKK4vYFNPlebAfOfPwNmeu5U1eTjzFOR4"
+DISCORD_TOKEN = ""
 
 COLOR = 0x00FFB3
 FOOTER = "under devlopement!"
