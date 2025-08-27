@@ -36,7 +36,7 @@ class PtableTeam(models.Model):
     logo = fields.CharField(max_length=200, null=True)
     added_by = fields.BigIntField()
     team_owner = fields.BigIntField()
-    players = ArrayField(fields.BigIntField(default=list))
+    players = ArrayField(fields.BigIntField(), default=list)
     last_used = fields.DatetimeField(auto_now=True)
 
 

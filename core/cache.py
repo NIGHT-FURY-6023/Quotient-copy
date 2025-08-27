@@ -1,18 +1,24 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import TYPE_CHECKING
-
 import config
 from constants import IST
-from models import AutoPurge, BlockList, EasyTag, Guild, Scrim, SSVerify, TagCheck, Tourney
+from datetime import datetime
+from typing import TYPE_CHECKING
+from models.misc.guild import Guild
+from models.misc.Tag import Tag
+from models.esports.tagcheck import TagCheck
+from models.esports.scrims import Scrim
+from models.esports.tourney import Tourney
+from models.misc.AutoPurge import AutoPurge
+from models.esports.ssverify import SSVerify
+from models.misc.block import BlockList
+
+if TYPE_CHECKING:
+    from .Bot import Quotient
 
 
 class CacheManager:
     def __init__(self, bot):
-        if TYPE_CHECKING:
-            from .Bot import Quotient
-
         self.bot: Quotient = bot
 
         self.guild_data = {}
@@ -27,14 +33,14 @@ class CacheManager:
         self.blocked_ids = set()
 
     async def fill_temp_cache(self):
+        
         async for record in Guild.all():
             self.guild_data[record.guild_id] = {
-                "prefix": record.prefix,
                 "color": record.embed_color or config.COLOR,
                 "footer": record.embed_footer or config.FOOTER,
             }
 
-        async for record in EasyTag.all():
+        async for record in Tag.all():
             self.eztagchannels.add(record.channel_id)
 
         async for record in TagCheck.all():

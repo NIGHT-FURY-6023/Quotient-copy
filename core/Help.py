@@ -12,7 +12,6 @@ from utils import LinkButton, LinkType, QuoPaginator, discord_timestamp, truncat
 
 from .Cog import Cog
 
-
 class HelpCommand(commands.HelpCommand):
     def __init__(self) -> None:
         super().__init__(
@@ -29,123 +28,177 @@ class HelpCommand(commands.HelpCommand):
 
     async def send_bot_help(self, mapping: Mapping[Cog, List[commands.Command]]):
         ctx = self.context
-
-        hidden = ("HelpCog", "Dev")
-
-        embed = discord.Embed(color=self.color)
-
-        server = f"[Support Server]({config.SERVER_LINK})"
-        invite = f"[Invite Me]({config.BOT_INVITE})"
-        dashboard = f"[Privacy Policy](https://github.com/quotientbot/Quotient-Bot/wiki/privacy-policy)"
-
-        embed.description = f"{server} **|** {invite} **|** {dashboard}\n\n"
-
-        guild = await Guild.get_or_none(pk=ctx.guild.id)
-        if guild and guild.is_premium:
-            embed.description += f"<a:top_user:807911932299837460> [__Server Premium ending:__]({config.SERVER_LINK}) {discord_timestamp(guild.premium_end_time)}"
-
-        for cog, cmds in mapping.items():
-            if cog and cog.qualified_name not in hidden and await self.filter_commands(cmds, sort=True):
-                embed.add_field(
-                    inline=False,
-                    name=cog.qualified_name.title(),
-                    value=", ".join(map(lambda x: f"`{x}`", cog.get_commands())),
-                )
-
-        slash_cmds = await ctx.bot.tree.fetch_commands()
-        slash_cmds = [f"{i.mention}" for i in slash_cmds]
-        embed.add_field(name="Slash Commands", value=", ".join(slash_cmds), inline=False)
-
-        links = [
-            LinkType("Support Server", config.SERVER_LINK),
-            LinkType("Invite Me", config.BOT_INVITE),
-        ]
-        await ctx.send(embed=embed, embed_perms=True, view=LinkButton(links))
-
-    async def send_group_help(self, group: commands.Group):
-        prefix = self.context.prefix
-
-        if not group.commands:
-            return await self.send_command_help(group)
-
-        embed = discord.Embed(color=discord.Color(self.color))
-
-        embed.title = f"{group.qualified_name} {group.signature}"
-        _help = group.help or "No description provided..."
-
-        _cmds = "\n".join(f"`{prefix}{c.qualified_name}` : {truncate_string(c.short_doc,60)}" for c in group.commands)
-
-        embed.description = f"> {_help}\n\n**Subcommands**\n{_cmds}"
-
-        embed.set_footer(text=f'Use "{prefix}help <command>" for more information.')
-
-        if group.aliases:
-            embed.add_field(
-                name="Aliases",
-                value=", ".join(f"`{aliases}`" for aliases in group.aliases),
-                inline=False,
+        
+        # Initialize pages dictionary
+        pages = {}
+        categories = []
+        
+        # Create home page with bot info
+        home_embed = discord.Embed(
+            color=self.color,
+            title="📚 Quotient Help Menu",
+            description=(
+                f"Welcome to Quotient's help menu! Below you'll find all available commands.\n\n"
+                f"```fix\n"
+                f"Bot Statistics\n"
+                f"• Servers: {len(ctx.bot.guilds):,}\n"
+                f"• Users: {sum(g.member_count for g in ctx.bot.guilds):,}\n"
+                f"• Commands: {len(set(ctx.bot.walk_commands())):,}\n"
+                f"```\n"
+                f"[`📌 Support Server`]({config.SERVER_LINK}) • "
+                f"[`🎯 Invite Me`]({config.BOT_INVITE}) • "
+                f"[`📜 Privacy Policy`](https://github.com/quotientbot/Quotient-Bot/wiki/privacy-policy)\n\n"
+                f"Use the dropdown menu or buttons below to navigate through different command categories.\n"
+                f"Type `{ctx.prefix}help <command>` for detailed info about a command.\n"
             )
-
-        examples = []
-        if group.extras:
-            if _gif := group.extras.get("gif"):
-                embed.set_image(url=_gif)
-
-            if _ex := group.extras.get("examples"):
-                examples = [f"{self.context.prefix}{i}" for i in _ex]
-
-        if examples:
-            examples: str = "\n".join(examples)  # type: ignore
-            embed.add_field(name="Examples", value=f"```{examples}```")
-
-        await self.context.send(embed=embed, embed_perms=True)
-
-    async def send_cog_help(self, cog: Cog):
-        paginator = QuoPaginator(self.context, per_page=14)
-        c = 0
-        for cmd in cog.get_commands():
-            if not cmd.hidden:
-                _brief = "No Information..." if not cmd.short_doc else truncate_string(cmd.short_doc, 60)
-                paginator.add_line(f"`{cmd.qualified_name}` : {_brief}")
-                c += 1
-
-        paginator.title = f"{cog.qualified_name.title()} ({c})"
-        await paginator.start()
-
-    async def send_command_help(self, cmd: commands.Command):
-        embed = discord.Embed(color=self.color)
-        embed.title = "Command: " + cmd.qualified_name
-
-        examples = []
-
-        alias = ",".join((f"`{alias}`" for alias in cmd.aliases)) if cmd.aliases else "No aliases"
-        _text = (
-            f"**Description:** {cmd.help or 'No help found...'}\n"
-            f"**Usage:** `{self.get_command_signature(cmd)}`\n"
-            f"**Aliases:** {alias}\n"
-            f"**Examples:**"
         )
 
-        if cmd.extras:
-            if _gif := cmd.extras.get("gif"):
-                embed.set_image(url=_gif)
+        # Add premium status if applicable
+        guild = await Guild.get_or_none(pk=ctx.guild.id)
+        if guild and guild.is_premium and guild.premium_end_time:
+            home_embed.add_field(
+                name="✨ Premium Status",
+                value=(
+                    f"```yaml\n"
+                    f"Status: Active\n"
+                    f"Expires: {discord_timestamp(guild.premium_end_time)}\n"
+                    f"```"
+                ),
+                inline=False
+            )
 
-            if _ex := cmd.extras.get("examples"):
-                examples = [f"{self.context.prefix}{i}" for i in _ex]
+        # Add warning for non-support server members
+        support_guild = ctx.bot.get_guild(ctx.bot.config.SERVER_ID)
+        if not support_guild or not support_guild.get_member(ctx.author.id):
+            home_embed.add_field(
+                name="⚠️ Access Restricted",
+                value=(
+                    "You need to join our support server to use bot commands.\n"
+                    f"[🔗 Click here to join Support Server]({ctx.bot.config.SERVER_LINK})"
+                ),
+                inline=False
+            )
 
-        examples: str = "\n".join(examples) if examples else "Command has no examples"  # type: ignore
+        # Add home page to pages dictionary
+        pages["home"] = home_embed
 
-        _text += f"```{examples}```"
+        # Add category pages
+        for cog, commands_list in mapping.items():
+            if not cog or cog.qualified_name in ("Jishaku", "Developer"):
+                continue
 
-        embed.description = _text
+            filtered = await self.filter_commands(commands_list, sort=True)
+            if not filtered:
+                continue
 
-        await self.context.send(embed=embed, embed_perms=True)
+            # Create category page
+            emoji = getattr(cog, "emoji", "📌")
+            cmd_count = len(filtered)
+            
+            # Add to categories list for dropdown
+            categories.append((cog.qualified_name, emoji, cmd_count))
+            
+            # Create category embed
+            category_embed = discord.Embed(
+                color=self.color,
+                title=f"{emoji} {cog.qualified_name} Commands",
+                description=(
+                    f"{cog.description or 'No category description provided.'}\n\n"
+                    f"Use `{ctx.prefix}help <command>` for more details on a command.\n"
+                )
+            )
 
-    async def command_not_found(self, string: str):
-        message = f"Could not find the `{string}` command. "
-        commands_list = (str(cmd) for cmd in self.context.bot.walk_commands())
+            # Add commands to category page
+            commands_list = []
+            for cmd in filtered:
+                signature = f"{ctx.prefix}{cmd.qualified_name} {cmd.signature}".strip()
+                aliases = f"[{', '.join(cmd.aliases)}]" if cmd.aliases else ""
+                cmd_desc = cmd.help or "No description provided."
+                if len(cmd_desc) > 100:
+                    cmd_desc = cmd_desc[:97] + "..."
+                
+                commands_list.append(f"**⚡ {cmd.name}**")
+                commands_list.append(f"```ml\n{signature}\n```")
+                commands_list.append(f"{cmd_desc}")
+                if aliases:
+                    commands_list.append(f"*Aliases: {aliases}*")
+                commands_list.append("")  # Empty line for spacing
 
-        if dym := "\n".join(get_close_matches(string, commands_list)):
-            message += f"Did you mean...\n{dym}"
+            # Split commands into chunks for better readability
+            category_embed.description += "\n\n" + "\n".join(commands_list)
+            
+            # Store in pages dict
+            pages[f"category_{cog.qualified_name}"] = category_embed
 
-        return message
+        # Store home page
+        pages["home"] = home_embed
+
+        # Create categories overview page
+        categories_embed = discord.Embed(
+            color=self.color,
+            title="📑 Command Categories",
+            description="Select a category from the dropdown menu above or click its name below:\n\n"
+        )
+
+        for name, emoji, cmd_count in categories:
+            categories_embed.description += f"{emoji} **{name}** - {cmd_count} commands\n"
+
+        pages["categories"] = categories_embed
+
+        # Create and start the help menu view
+        from .HelpMenu import HelpView
+        view = HelpView(pages, categories)
+        await view.start(ctx)
+
+    async def send_command_help(self, command):
+        ctx = self.context
+        embed = discord.Embed(
+            title=f"Command: {command.qualified_name}",
+            color=self.color
+        )
+
+        # Usage section
+        usage = f"{ctx.prefix}{command.qualified_name} {command.signature}"
+        embed.add_field(
+            name="Usage",
+            value=f"```ml\n{usage}\n```",
+            inline=False
+        )
+
+        # Help text
+        if command.help:
+            embed.add_field(
+                name="Description",
+                value=command.help,
+                inline=False
+            )
+
+        # Aliases if any
+        if command.aliases:
+            embed.add_field(
+                name="Aliases",
+                value=", ".join(f"`{alias}`" for alias in command.aliases),
+                inline=False
+            )
+
+        await ctx.send(embed=embed)
+
+    async def send_error_message(self, error):
+        embed = discord.Embed(title="Error", description=error, color=discord.Color.red())
+        await self.context.send(embed=embed)
+
+    async def command_not_found(self, string):
+        ctx = self.context
+        cmds = {cmd.name for cmd in ctx.bot.commands}
+        matches = get_close_matches(string, cmds, n=3, cutoff=0.6)
+
+        if matches:
+            matches_text = "\n".join(f"`{ctx.prefix}{match}`" for match in matches)
+            return (
+                f"Command `{string}` not found. Did you mean:\n"
+                f"{matches_text}"
+            )
+        return f"Command `{string}` not found."
+
+    async def subcommand_not_found(self, command, string):
+        return f"Command `{command.qualified_name}` has no subcommand named `{string}`"

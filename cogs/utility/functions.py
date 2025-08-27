@@ -56,8 +56,7 @@ async def is_valid_name(ctx: Context, name: str) -> bool:
 
 
 async def increment_usage(ctx: Context, name) -> None:
-    query = "UPDATE tags SET usage = usage + 1 WHERE guild_id = $1 AND name = $2"
-    await ctx.db.execute(query, ctx.guild.id, name)
+    await Tag.filter(guild_id=ctx.guild.id, name=name).update(usage=Tag.usage + 1)
 
 
 def emojize(seq):

@@ -61,13 +61,30 @@ class QuoPaginator:
 
         self.lines = []
         self.pages = None
+        self._current_page = None
 
     def add_line(self, line: str, sep="\n"):
         self.lines.append(f"{line}{sep}")
 
+    def set_pages(self, pages):
+        if not pages:
+            raise ValueError("Cannot set empty pages list")
+        self.pages = Pages(pages)
+        if not self._current_page:
+            self._current_page = pages[0]
+
     @property
     def embed(self):
+        if not self.pages or not self.pages.pages:
+            if not self._current_page:
+                raise ValueError("No pages have been set")
+            return self._current_page
+            
         page = self.pages.current_page
+        self._current_page = page.content
+        
+        if isinstance(self._current_page, discord.Embed):
+            return self._current_page
 
         e = discord.Embed(color=self.ctx.bot.color)
         if self.title:

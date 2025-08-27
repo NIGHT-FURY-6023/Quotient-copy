@@ -461,4 +461,21 @@ class SaveScrim(ScrimsButton):
         view.message = await self.view.message.edit(embed=await view.initial_embed(), view=view)
 
 
-#!add option to add this scrim to cancel claim
+class ScrimsButton(discord.ui.Button):
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            if not self.ctx.bot.reminders:
+                self.ctx.bot.reminders = Reminders(self.ctx.bot)
+                
+            await self.ctx.bot.reminders.create_timer(
+                self.view.record.open_time, 
+                "scrim_open", 
+                scrim_id=self.view.record.id
+            )
+            # ...existing code...
+        except Exception as e:
+            await interaction.response.send_message(
+                f"Failed to create scrim timer: {str(e)}", 
+                ephemeral=True
+            )
+            raise

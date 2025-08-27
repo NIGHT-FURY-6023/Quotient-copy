@@ -20,10 +20,10 @@ class Guild(BaseDbModel):
 
     tag_enabled_for_everyone = fields.BooleanField(default=True)  # ye naam maine ni rkha sachi
 
-    is_premium = fields.BooleanField(default=True)  # Everyone gets premium features
-    made_premium_by = fields.BigIntField(null=True)
-    premium_end_time = fields.DatetimeField(null=True)
-    premium_notified = fields.BooleanField(default=False)
+    is_premium = fields.BooleanField(default=False)  # Premium features are limited by default
+    made_premium_by = fields.BigIntField(null=True)  # Owner who granted premium
+    premium_end_time = fields.DatetimeField(null=True)  # When premium expires
+    premium_notified = fields.BooleanField(default=False)  # Notification for premium expiry
 
     public_profile = fields.BooleanField(default=True)  # whether to list the server on global leaderboards
 

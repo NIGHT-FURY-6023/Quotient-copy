@@ -16,7 +16,9 @@ from models import Timer, User, Votes
 class VotesCog(Cog):
     def __init__(self, bot: Quotient):
         self.bot = bot
-        self.hook = Webhook.from_url(self.bot.config.PUBLIC_LOG, session=self.bot.session)
+        self.hook = None
+        if self.bot.config.PUBLIC_LOG:
+            self.hook = Webhook.from_url(self.bot.config.PUBLIC_LOG, session=self.bot.session)
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member):
@@ -28,8 +30,11 @@ class VotesCog(Cog):
         if await Votes.get(user_id=member.id, is_voter=True).exists():
             await member.add_roles(discord.Object(id=self.bot.config.VOTER_ROLE))
 
-        if await User.get(pk=member.id, is_premium=True).exists():
-            await member.add_roles(discord.Object(id=self.bot.config.PREMIUM_ROLE))
+        if await User.get(pk=member.id, is_premium=True).exists() and self.bot.config.PREMIUM_ROLE:
+            try:
+                await member.add_roles(discord.Object(id=self.bot.config.PREMIUM_ROLE))
+            except discord.HTTPException:
+                pass  # Role doesn't exist or bot lacks permissions
 
     @Cog.listener()
     async def on_vote_timer_complete(self, timer: Timer):

@@ -45,23 +45,23 @@ EXTENSIONS = (
 )
 
 # Bot Configuration
-DISCORD_TOKEN = "YOUR_BOT_TOKEN_HERE"
+DISCORD_TOKEN = ""
 
 COLOR = 0x00FFB3
 FOOTER = "quo is lub!"
 PREFIX = "q"
 
 # Links
-SERVER_LINK = "https://discord.gg/your-server"
+SERVER_LINK = "https://discord.gg/HuXybWkK"
 BOT_INVITE = "https://discord.com/oauth2/authorize?client_id=YOUR_BOT_ID&scope=bot&permissions=8"
 WEBSITE = "https://your-website.com"
 REPOSITORY = "https://github.com/your-repo"
 
 # Developer IDs (replace with your Discord user ID)
-DEVS = (123456789012345678,)  # Replace with your actual Discord user ID
+DEVS = (761635564835045387,)  # Replace with your actual Discord user ID
 
 # Server Configuration
-SERVER_ID = 123456789012345678  # Replace with your server ID
+SERVER_ID = 1242541956161081414  # Replace with your server ID
 SERVER_PORT = 8000
 
 # Role IDs (replace with actual role IDs from your server)
@@ -69,9 +69,9 @@ VOTER_ROLE = 123456789012345678
 PREMIUM_ROLE = 123456789012345678
 
 # Webhook URLs (optional - can be left empty)
-SHARD_LOG = ""
-ERROR_LOG = ""
-PUBLIC_LOG = ""
+SHARD_LOG = "https://discord.com/api/webhooks/1410048134863650920/xxzptnWTcxisa0rnAKfTtUSos2aicU9KiSYIk3kIIg_16M8K8sC5oBvyJjf8CNabo-VJ"
+ERROR_LOG = "https://discord.com/api/webhooks/1410048134863650920/xxzptnWTcxisa0rnAKfTtUSos2aicU9KiSYIk3kIIg_16M8K8sC5oBvyJjf8CNabo-VJ"
+PUBLIC_LOG = "https://discord.com/api/webhooks/1410048134863650920/xxzptnWTcxisa0rnAKfTtUSos2aicU9KiSYIk3kIIg_16M8K8sC5oBvyJjf8CNabo-VJ"
 
 # Premium/Payment related (can be left empty since we're removing premium)
 PAYU_KEY = ""

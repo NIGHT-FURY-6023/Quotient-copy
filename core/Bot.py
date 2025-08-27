@@ -21,11 +21,11 @@ from tortoise import Tortoise
 
 import config as cfg
 import constants as csts
-from models import Guild, Timer
 
 from .cache import CacheManager
 from .Context import Context
 from .Help import HelpCommand
+from .reminders import Reminders  # Add this import at the top
 
 intents = Intents.default()
 intents.members = True
@@ -73,6 +73,56 @@ class Quotient(commands.AutoShardedBot):
 
         self.message_cache: Dict[int, Any] = LRU(1024)  # type: ignore
 
+        # Add global check for support server
+        self.add_check(self.support_server_check)
+
+        self.reminders = Reminders(self)  # Initialize Reminders here
+
+    async def support_server_check(self, ctx: Context) -> bool:
+        """Global check to ensure commands that require support server access are restricted."""
+        # Bot owner bypass
+        if await self.is_owner(ctx.author):
+            return True
+
+        # Get support server
+        support_guild = self.get_guild(self.config.SERVER_ID)
+        if not support_guild:
+            return True  # If bot can't find support server, allow command
+
+        is_member = support_guild.get_member(ctx.author.id) is not None
+
+        # Premium/special commands that require support server
+        premium_commands = {
+            'premium',
+            'claim',
+            'transfer_ownership',
+            'perks'
+        }
+
+        if ctx.command and ctx.command.qualified_name in premium_commands and not is_member:
+            await ctx.send(
+                f"❌ You need to be in the support server to use this command.\n"
+                f"Support Server Link: {self.config.SERVER_LINK}"
+            )
+            return False
+
+        return True  # Allow all other commands
+
+        # Check if user is in support server
+        if not support_guild.get_member(ctx.author.id):
+            embed = discord.Embed(
+                color=discord.Color.red(),
+                title="Not in Support Server",
+                description=(
+                    f"You need to join our support server to use my commands.\n\n"
+                    f"[Click here to join]({self.config.SERVER_LINK})"
+                )
+            )
+            await ctx.send(embed=embed)
+            return False
+
+        return True
+
     @on_startup.append
     async def __load_extensions(self):
         for ext in self.config.EXTENSIONS:
@@ -118,7 +168,27 @@ class Quotient(commands.AutoShardedBot):
     @property
     def db(self):
         """to execute raw queries"""
-        return Tortoise.get_connection("default")._pool
+        conn = Tortoise.get_connection("default")
+        
+        # Add execute_query method to handle parameterized queries
+        if not hasattr(conn, 'execute_query'):
+            async def execute_query(query: str, params: list = None):
+                # Use fetchall to handle SELECT queries, execute for others
+                try:
+                    async with conn.acquire_connection() as connection:
+                        async with connection.cursor() as cursor:
+                            await cursor.execute(query, params or [])
+                            try:
+                                return await cursor.fetchall()
+                            except:  # Not a SELECT query
+                                return None
+                except Exception as e:
+                    print(f"Database error: {e}")
+                    raise
+                    
+            conn.execute_query = execute_query
+            
+        return conn
 
     @property
     def prime_link(self):
@@ -205,10 +275,26 @@ class Quotient(commands.AutoShardedBot):
         self.cmd_invokes += 1
         await csts.show_tip(ctx)
         await csts.remind_premium(ctx)
-        await self.db.execute(
-            "INSERT INTO user_data (user_id) VALUES ($1) ON CONFLICT DO NOTHING",
+        
+        # Insert user with default values
+        query = """
+        INSERT INTO user_data (
+            user_id, is_premium, made_premium, premiums, 
+            premium_notified, public_profile, money
+        ) 
+        VALUES (?, ?, ?, ?, ?, ?, ?) 
+        ON CONFLICT DO NOTHING;
+        """
+        params = [
             ctx.author.id,
-        )
+            True,  # is_premium default
+            '[]',  # made_premium default (empty array)
+            0,     # premiums default
+            False, # premium_notified default
+            True,  # public_profile default
+            0,     # money default
+        ]
+        await self.db.execute_query(query, params)
 
     async def on_ready(self):
         print(f"[Quotient] Logged in as {self.user.name}({self.user.id})")
@@ -343,8 +429,16 @@ class Quotient(commands.AutoShardedBot):
 
     @property
     async def db_latency(self):
+        """Get database latency for SQLite"""
         t1 = time.perf_counter()
-        await self.db.fetchval("SELECT 1;")
+        try:
+            async with self.db.execute("SELECT 1") as cursor:
+                await cursor.fetchone()
+            t2 = time.perf_counter()
+            return f"{round((t2 - t1) * 1000, 2)} ms"
+        except Exception as e:
+            return "Error"
+        
         t2 = time.perf_counter() - t1
         return f"{t2*1000:.2f} ms"
 
