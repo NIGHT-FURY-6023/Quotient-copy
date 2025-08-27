@@ -1,0 +1,5 @@
+[console_scripts]
+version = mystbin.__main__:show_version
+
+[gui_scripts]
+

@@ -1,0 +1,104 @@
+Metadata-Version: 2.1
+Name: mystbin-py
+Version: 7.1.1
+Summary: A small simple wrapper around the mystb.in API.
+Keywords: mystbin,paste
+Author-Email: =?utf-8?q?Alex_N=C3=B8rgaard?= <umbra@abstractumbra.dev>
+License: Copyright 2020-Present PythonistaGuild
+         
+         Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+         
+         The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+         
+         THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+         
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Intended Audience :: Developers
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Internet
+Classifier: Typing :: Typed
+Project-URL: Issue Tracker, https://github.com/PythonistaGuild/mystbin.py/issues
+Project-URL: homepage, https://github.com/PythonistaGuild/mystbin.py
+Project-URL: repository, https://github.com/PythonistaGuild/mystbin.py
+Requires-Python: <4.0,>=3.8
+Requires-Dist: aiohttp<4.0,>=3.8
+Requires-Dist: aiohttp[speedups]<4.0,>=3.8; extra == "speed"
+Description-Content-Type: text/markdown
+
+<div align="center">
+    <h1>Mystbin.py!</h1>
+    <a href='https://mystbinpy.readthedocs.io/en/latest/?badge=latest'>
+        <img src='https://readthedocs.org/projects/mystbinpy/badge/?version=latest' alt='Documentation Status' />
+    </a>
+    <a href='https://github.com/PythonistaGuild/mystbin.py/actions/workflows/coverage_and_lint.yaml'>
+        <img src='https://github.com/PythonistaGuild/mystbin.py/workflows/Type%20Coverage%20and%20Linting/badge.svg?branch=main' alt='Linting status' />
+    </a>
+    <a href='https://github.com/PythonistaGuild/mystbin.py/actions/workflows/build.yaml'>
+        <img src='https://github.com/PythonistaGuild/mystbin.py/workflows/Build/badge.svg' alt='Build status' />
+    </a>
+</div>
+<br>
+
+A small simple wrapper around the [Mystb.in](https://mystb.in/) API. API docs can be found [here](https://mystb.in/api/documentation).
+
+Documentation for this wrapper can be found [here](https://mystbinpy.readthedocs.io/en/stable/).
+If you want the docs for the `main` branch, those can be found [here](https://mystbinpy.readthedocs.io/en/latest/).
+
+----------
+### Features
+
+- [x] - Creating pastes.
+- [x] - Deleting pastes.
+- [x] - Getting pastes.
+- [ ] - Sync client.
+  - This one will take some time as I have no motivation to do it, but PRs are welcome if others want to do it.
+
+### Installation
+This project will be on [PyPI](https://pypi.org/project/mystbin.py/) as a stable release, you can always find that there.
+
+Installing via `pip`:
+```shell
+python -m pip install -U mystbin.py
+```
+
+Installing from source:
+```shell
+python -m pip install git+https://github.com/PythonistaGuild/mystbin.py.git
+```
+
+### Usage examples
+
+```py
+# async example - it will default to async
+import mystbin
+
+client = mystbin.Client()
+
+file = mystbin.File(filename="File1.txt", content="Hello there!")
+file2 = mystbin.File(filename="test.py", content="print('hello!')")
+
+paste = await client.create_paste(files=[file, file2])
+
+str(paste)
+>>> 'https://mystb.in/<your generated ID>'
+
+get_paste = await client.get_paste("<your generated ID>")
+get_paste.files[0].content
+>>> "Hello there!"
+
+get_paste.created_at
+>>> datetime.datetime(2020, 10, 6, 10, 53, 57, 556741)
+```
+
+If you have any question please feel free to join the Pythonista Discord server:
+<div align="left">
+    <a href="https://discord.gg/RAKc3HF">
+        <img src="https://discordapp.com/api/guilds/490948346773635102/widget.png?style=banner2" alt="Discord Server"/>
+    </a>
+</div>

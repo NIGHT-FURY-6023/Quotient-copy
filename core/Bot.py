@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Callable, Coroutine, Dict, Iterable, List, Optional, Union
 
 if TYPE_CHECKING:
@@ -13,8 +14,9 @@ from datetime import datetime, timedelta
 
 import aiohttp
 import discord
+from models import Timer
 from aiocache import cached
-from discord import AllowedMentions, Intents
+from discord import AllowedMentions, Intents, app_commands
 from discord.ext import commands
 from lru import LRU
 from tortoise import Tortoise
@@ -83,13 +85,15 @@ class Quotient(commands.AutoShardedBot):
         # Bot owner bypass
         if await self.is_owner(ctx.author):
             return True
+            
+        # Allow premium commands everywhere
+        if ctx.command and ctx.command.qualified_name.startswith('premium'):
+            return True
 
         # Get support server
         support_guild = self.get_guild(self.config.SERVER_ID)
         if not support_guild:
             return True  # If bot can't find support server, allow command
-
-        is_member = support_guild.get_member(ctx.author.id) is not None
 
         # Premium/special commands that require support server
         premium_commands = {
@@ -99,27 +103,20 @@ class Quotient(commands.AutoShardedBot):
             'perks'
         }
 
-        if ctx.command and ctx.command.qualified_name in premium_commands and not is_member:
-            await ctx.send(
-                f"❌ You need to be in the support server to use this command.\n"
-                f"Support Server Link: {self.config.SERVER_LINK}"
-            )
-            return False
-
-        return True  # Allow all other commands
-
-        # Check if user is in support server
-        if not support_guild.get_member(ctx.author.id):
-            embed = discord.Embed(
-                color=discord.Color.red(),
-                title="Not in Support Server",
-                description=(
-                    f"You need to join our support server to use my commands.\n\n"
-                    f"[Click here to join]({self.config.SERVER_LINK})"
+        # Only check support server membership for premium commands
+        if ctx.command and ctx.command.qualified_name.split()[0] in premium_commands:
+            is_member = support_guild.get_member(ctx.author.id) is not None
+            if not is_member:
+                embed = discord.Embed(
+                    color=discord.Color.red(),
+                    title="Not in Support Server",
+                    description=(
+                        f"You need to join our support server to use premium commands.\n\n"
+                        f"[Click here to join]({self.config.SERVER_LINK})"
+                    )
                 )
-            )
-            await ctx.send(embed=embed)
-            return False
+                await ctx.send(embed=embed)
+                return False
 
         return True
 
@@ -130,27 +127,49 @@ class Quotient(commands.AutoShardedBot):
             print(f"Loaded extension: {ext}")
 
     @on_startup.append
-    async def __load_presistent_views(self):
-        from cogs.esports.views import GroupRefresh, ScrimsSlotmPublicView, SlotlistEditButton, TourneySlotManager
-        from models import Scrim, ScrimsSlotManager, TGroupList, Tourney
-
-        # Persistent views
-        async for record in ScrimsSlotManager.all():
-            self.add_view(ScrimsSlotmPublicView(record), message_id=record.message_id)
-
-        async for tourney in Tourney.filter(slotm_message_id__isnull=False):
-            self.add_view(
-                TourneySlotManager(self, tourney=tourney),
-                message_id=tourney.slotm_message_id,
-            )
-
-        async for scrim in Scrim.filter(slotlist_message_id__isnull=False):
-            self.add_view(SlotlistEditButton(self, scrim), message_id=scrim.slotlist_message_id)
+    async def __setup_views(self):
+        from cogs.esports import GroupRefresh, TGroupList
 
         async for record in TGroupList.all():
             self.add_view(GroupRefresh(), message_id=record.message_id)
 
-        print("Persistent views: Loaded them too ")
+        # Sync slash commands with verification
+        print("Syncing slash commands...")
+        try:
+            # Clear existing commands first
+            self.tree.clear_commands(guild=None)
+            self.tree.clear_commands(guild=discord.Object(id=self.config.SERVER_ID))
+            
+            # Copy and sync guild-specific commands
+            guild = discord.Object(id=self.config.SERVER_ID)
+            self.tree.copy_global_to(guild=guild)
+            commands_guild = await self.tree.sync(guild=guild)
+            print(f"Synced {len(commands_guild)} commands to main guild")
+            
+            # Sync globally
+            commands_global = await self.tree.sync()
+            print(f"Synced {len(commands_global)} commands globally")
+            
+            # Verify important commands exist
+            found_commands = set()
+            for cmd in itertools.chain(commands_guild, commands_global):
+                if isinstance(cmd, app_commands.Group):
+                    found_commands.update(f"{cmd.name} {subcmd.name}" for subcmd in cmd.commands)
+                else:
+                    found_commands.add(cmd.name)
+                    
+            required_commands = {"premium info", "premium status"}
+            missing_commands = required_commands - found_commands
+            
+            if missing_commands:
+                print(f"WARNING: Missing required commands: {', '.join(missing_commands)}")
+            else:
+                print("All required commands synced successfully!")
+                    
+        except Exception as e:
+            print(f"Error syncing commands: {e}")
+        
+        print("Persistent views loaded successfully")
 
     @on_startup.append
     async def __chunk_prime_guilds(self):
@@ -216,6 +235,13 @@ class Quotient(commands.AutoShardedBot):
 
     async def setup_hook(self) -> None:
         await self.init_quo()
+        
+        # Sync commands
+        print("Syncing commands...")
+        self.tree.copy_global_to(guild=discord.Object(id=self.config.SERVER_ID))
+        await self.tree.sync()
+        await self.tree.sync(guild=discord.Object(id=self.config.SERVER_ID))
+        
         for coro_func in on_startup:
             self.loop.create_task(coro_func(self))
 
@@ -402,9 +428,11 @@ class Quotient(commands.AutoShardedBot):
                 for member in members:
                     yield member
 
-    @staticmethod
-    async def is_premium_guild(guild_id: int) -> bool:
-        return True  # Everyone gets premium features
+    async def is_premium_guild(self, guild_id: int) -> bool:
+        """Check if a guild has premium features"""
+        from models import Guild
+        guild = await Guild.get_or_none(pk=guild_id)
+        return guild and guild.is_premium
 
     @property
     def server(self) -> Optional[discord.Guild]:

@@ -48,7 +48,7 @@ EXTENSIONS = (
 DISCORD_TOKEN = "MTE4NDA4NzUzNzQ4OTI4NTE2MA.GFwcBG.lpbRBIKK4vYFNPlebAfOfPwNmeu5U1eTjzFOR4"
 
 COLOR = 0x00FFB3
-FOOTER = "quo is lub!"
+FOOTER = "under devlopement!"
 PREFIX = "q"
 
 # Links
@@ -65,8 +65,8 @@ SERVER_ID = 1242541956161081414  # Replace with your server ID
 SERVER_PORT = 8000
 
 # Role IDs (replace with actual role IDs from your server)
-VOTER_ROLE = 123456789012345678
-PREMIUM_ROLE = 123456789012345678
+VOTER_ROLE = 1410147134233247794
+PREMIUM_ROLE = 1410147134233247794
 
 # Webhook URLs (optional - can be left empty)
 SHARD_LOG = "https://discord.com/api/webhooks/1410048134863650920/xxzptnWTcxisa0rnAKfTtUSos2aicU9KiSYIk3kIIg_16M8K8sC5oBvyJjf8CNabo-VJ"

@@ -44,7 +44,7 @@ class PlanSelector(discord.ui.Select):
 
 class PremiumPurchaseBtn(discord.ui.Button):
     def __init__(self, label="Get Quotient Pro", emoji=emote.diamond, style=discord.ButtonStyle.grey):
-        super().__init__(style=style, label=label, emoji=emoji)
+        super().__init__(style=style, label=label, emoji=emoji, custom_id="premium_purchase_btn")
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
