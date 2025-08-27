@@ -42,9 +42,7 @@ class SsmodMainView(EsportsBaseView):
     async def setup_ssverify_button(self, interaction: discord.Interaction, button: discord.Button):
         await interaction.response.defer()
 
-        if not await self.ctx.is_premium_guild():
-            if await SSVerify.filter(guild_id=self.ctx.guild.id).exists():
-                return await self.ctx.premium_mango("You need Quotient Premium to setup more than 1 ssverify.")
+        # Removed premium restriction - unlimited ssverify for everyone
 
         view = SetupWizard(self.ctx)
         _e = view.initial_message()

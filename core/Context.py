@@ -137,12 +137,7 @@ class Context(commands.Context["commands.Bot"], Generic[BotT]):
         return None
 
     async def is_premium_guild(self) -> bool:
-        from models import Guild
-
-        with suppress(AttributeError):
-            return (await Guild.get(guild_id=self.guild.id)).is_premium
-
-        return False
+        return True  # Everyone gets premium features
 
     async def send_file(
         self,

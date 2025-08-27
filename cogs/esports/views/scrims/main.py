@@ -55,9 +55,7 @@ class ScrimsMain(ScrimsView):
     async def create_new_scrim(self, interaction: Interaction, button: ui.Button):
         await interaction.response.defer()
 
-        if not await self.ctx.is_premium_guild():
-            if await Scrim.filter(guild_id=self.ctx.guild.id).count() >= 3:
-                return await self.ctx.premium_mango("Only 3 scrims can be created with free plan.")
+        # Removed premium restriction - unlimited scrims for everyone
 
         self.stop()
         v = ScrimSetup(self.ctx)

@@ -28,44 +28,60 @@ class TagEvents(Cog):
 
         channel_id = message.channel.id
 
-        if not channel_id in self.bot.cache.tagcheck:
+        # Fast cache check
+        if channel_id not in self.bot.cache.tagcheck:
             return
 
-        tagcheck = await TagCheck.get_or_none(channel_id=channel_id)
+        try:
+            # Get tagcheck config
+            tagcheck = await TagCheck.get_or_none(channel_id=channel_id)
+            if not tagcheck:
+                self.bot.cache.tagcheck.discard(channel_id)
+                return
 
-        if not tagcheck:
-            return self.bot.cache.tagcheck.discard(channel_id)
+            # Get ignore role
+            ignore_role = tagcheck.ignorerole
+            if ignore_role and ignore_role in message.author.roles:
+                return
 
-        ignore_role = tagcheck.ignorerole
-
-        if ignore_role is not None and ignore_role in message.author.roles:  # type: ignore # line guarded #25
-            return
-
-        with suppress(discord.HTTPException, AttributeError):
             ctx = await self.bot.get_context(message)
-
             _react = True
-            if tagcheck.required_mentions and not all(map(lambda m: not m.bot, message.mentions)):
+            
+            # Check for bot mentions
+            if any(m.bot for m in message.mentions):
                 _react = False
-                await message.reply("Kindly mention your real teammate.", delete_after=5)
-
-            if not len(message.mentions) >= tagcheck.required_mentions:
+                with suppress(discord.HTTPException):
+                    await message.reply("❌ Please mention real teammates, not bots.", delete_after=5)
+                    
+            # Check required mentions
+            elif len(message.mentions) < tagcheck.required_mentions:
                 _react = False
-                await message.reply(
-                    f"You need to mention `{utils.plural(tagcheck.required_mentions):teammate|teammates}`.",
-                    delete_after=5,
-                )
+                with suppress(discord.HTTPException):
+                    await message.reply(
+                        f"❌ You need to mention {tagcheck.required_mentions} teammate{'s' if tagcheck.required_mentions > 1 else ''}.",
+                        delete_after=5,
+                    )
 
+            # Find team name and handle reactions
+            # Find team name and handle reactions
             team_name = utils.find_team(message)
-            await message.add_reaction(("❌", "✅")[_react])
+            with suppress(discord.HTTPException):
+                await message.add_reaction("✅" if _react else "❌")
 
             if _react:
-                embed = self.bot.embed(ctx)
-                embed.description = f"Team Name: {team_name}\nPlayer(s): {(', '.join(m.mention for m in message.mentions)) if message.mentions else message.author.mention}"
-                await message.reply(embed=embed)
+                embed = discord.Embed(color=self.bot.color)
+                players = [m.mention for m in message.mentions] if message.mentions else [message.author.mention]
+                embed.description = f"**Team Name:** {team_name}\n**Players:** {', '.join(players)}"
+                with suppress(discord.HTTPException):
+                    await message.reply(embed=embed)
 
-            if tagcheck.delete_after and not _react:
+            elif tagcheck.delete_after:
+                # Schedule message deletion if needed
                 self.bot.loop.create_task(delete_denied_message(message, 15))
+                    
+        except Exception as e:
+            self.bot.dispatch("error", e)  # Log any errors
+            return
 
     # ==========================================================================================================
     # ==========================================================================================================
@@ -75,43 +91,72 @@ class TagEvents(Cog):
         if not message.guild or message.author.bot:
             return
 
-        if not message.channel.id in self.bot.cache.eztagchannels:
-            return
-
         channel_id = message.channel.id
-        eztag = await EasyTag.get_or_none(channel_id=channel_id)
-
-        if not eztag:
-            return self.bot.cache.eztagchannels.discard(channel_id)
-
-        ignore_role = eztag.ignorerole
-
-        if ignore_role is not None and ignore_role in message.author.roles:  # type: ignore # line guarded #74
+        if not channel_id in self.bot.cache.eztagchannels:
             return
 
-        with suppress(discord.HTTPException, AttributeError):
+        try:
+            # Get eztag config
+            eztag = await EasyTag.get_or_none(channel_id=channel_id)
+            if not eztag:
+                self.bot.cache.eztagchannels.discard(channel_id)
+                return
+
+            # Check ignore role
+            ignore_role = eztag.ignorerole
+            if ignore_role and ignore_role in message.author.roles:
+                return
+
             ctx = await self.bot.get_context(message)
 
+            # Find discord tags in message
             tags = set(re.findall(r"\b\d{18}\b|\b@\w+", message.content, re.IGNORECASE))
-
             if not tags:
-                await message.add_reaction("❌")
-                return await ctx.reply(
-                    "I couldn't find any discord tag in this form.\nYou can write your teammate's id , @their_name or @their_full_discord_tag",
-                    delete_after=10,
+                with suppress(discord.HTTPException):
+                    await message.add_reaction("❌")
+                    await ctx.reply(
+                        "❌ No Discord tags found! You can mention teammates using:\n"
+                        "• Their Discord ID\n"
+                        "• @their_name\n"
+                        "• @their_full_discord_tag",
+                        delete_after=10,
+                    )
+                return
+
+            # Convert tags to members
+            members = []
+            for tag in tags:
+                try:
+                    member = await EasyMemberConverter().convert(ctx, tag)
+                    if member:
+                        members.append(member)
+                except commands.MemberNotFound:
+                    continue
+
+            if not members:
+                with suppress(discord.HTTPException):
+                    await message.add_reaction("❌")
+                    await ctx.reply("❌ No valid members found from the provided tags.", delete_after=10)
+                return
+
+            # Send confirmation with tags
+            with suppress(discord.HTTPException):
+                await message.add_reaction("✅")
+                msg = await ctx.reply(
+                    embed=discord.Embed(
+                        color=self.bot.color,
+                        description=f"**Message:** {message.clean_content}\n**Discord Tags:** {', '.join(m.mention for m in members)}"
+                    )
                 )
 
-            members = []
-            for m in tags:
-                members.append(await EasyMemberConverter().convert(ctx, m))
+                # Handle auto-delete if enabled
+                if eztag.delete_after:
+                    self.bot.loop.create_task(delete_denied_message(message, 60))
+                    self.bot.loop.create_task(delete_denied_message(msg, 60))
 
-            mentions = ", ".join(members)
-
-            msg = await ctx.reply(f"```{message.clean_content}\nDiscord Tags: {mentions}```")
-
-            if eztag.delete_after:
-                self.bot.loop.create_task(delete_denied_message(message, 60))
-                self.bot.loop.create_task(delete_denied_message(msg, 60))
+        except Exception as e:
+            self.bot.dispatch("error", e)  # Log any errors
+            return
 
     @Cog.listener(name="on_guild_channel_delete")
     async def on_channel_delete(self, channel: discord.abc.GuildChannel) -> None:

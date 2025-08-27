@@ -82,8 +82,7 @@ class Ssverification(Cog):
         if not record:
             return self.bot.cache.ssverify_channels.discard(message.channel.id)
         #
-        if "tourney-mod" in (role.name.lower() for role in message.author.roles):  # type: ignore # line guarded #70-76
-            return
+        # Removed mod role check - everyone can use ssverify
 
         ctx: Context = await self.bot.get_context(message)
 

@@ -45,9 +45,17 @@ class PremiumTxn(BaseDbModel):
     user_id = fields.BigIntField()
     guild_id = fields.BigIntField()
     plan_id = fields.IntField()
-
+    
+    # Payment status
+    payment_status = fields.CharField(max_length=20, default="pending")  # pending, verified, expired
+    payment_proof = fields.CharField(max_length=500, null=True)  # Screenshot URL
+    payment_verified_by = fields.BigIntField(null=True)  # Admin who verified
+    verification_message_id = fields.BigIntField(null=True)  # Message ID in admin channel
+    
     created_at = fields.DatetimeField(auto_now=True)
     completed_at = fields.DatetimeField(null=True)
+    expires_at = fields.DatetimeField(null=True)  # When premium expires
+    notified_at = fields.DatetimeField(null=True)  # When user was notified of expiry
     raw_data = fields.JSONField(default=dict)
 
     @staticmethod

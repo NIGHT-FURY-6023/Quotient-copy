@@ -247,14 +247,19 @@ class Utility(Cog, name="utility"):
         if name.is_nsfw and not ctx.channel.is_nsfw():
             return await ctx.error("This tag can only be used in NSFW channels.")
 
-        if name.is_embed is True:
-            _dict = leval(name.content)
-            await ctx.send(embed=discord.Embed.from_dict(_dict), reference=ctx.replied_reference)
-
         if not name.content:
             return await ctx.error("Tag doesn't have any content")
-        await ctx.send(name.content, reference=ctx.replied_reference)
-        await increment_usage(ctx, name.name)
+
+        try:
+            if name.is_embed:
+                _dict = leval(name.content)
+                await ctx.send(embed=discord.Embed.from_dict(_dict), reference=ctx.replied_reference)
+            else:
+                await ctx.send(name.content, reference=ctx.replied_reference)
+            
+            await increment_usage(ctx, name.name)
+        except Exception as e:
+            await ctx.error(f"Failed to send tag: {str(e)}")
 
     @tag.command(name="raw")
     @commands.bot_has_permissions(attach_files=True)
@@ -617,6 +622,7 @@ class Utility(Cog, name="utility"):
                 "You cannot set autopurge in more than 1 channel in free tier."
                 f"\nHowever [Quotient Premium]({ctx.bot.prime_link}) allows you to set autopurge in unlimited channels."
             )
+        # Removed premium restriction - unlimited autopurge channels for everyone
 
         if channel.id in self.bot.cache.autopurge_channels:
             return await ctx.error(f"**{channel}** is already an autopurge channel.")

@@ -62,8 +62,7 @@ class ScrimManager(Cog, name="Esports"):
         """
         Contains commands related to Quotient's powerful scrims manager.
         """
-        if not any((ctx.author.guild_permissions.manage_guild, Scrim.is_ignorable(ctx.author))):
-            return await ctx.error(f"You need `scrims-mod` role or `Manage-Server` permissions to use this command.")
+        # Removed permission check - now available to everyone
 
         v = ScrimsMain(ctx)
         v.message = await ctx.send(embed=await v.initial_embed(), view=v)
@@ -79,10 +78,7 @@ class ScrimManager(Cog, name="Esports"):
     @commands.cooldown(1, 15, type=commands.BucketType.guild)
     async def tourney(self, ctx: Context):
         """Create & Manage tournaments with Quotient"""
-        if not Tourney.is_ignorable(ctx.author) and not ctx.author.guild_permissions.manage_guild:
-            return await ctx.error(
-                "You need either `Manage Server` permissions or `@tourney-mod` role to manage tournaments."
-            )
+        # Removed permission check - now available to everyone
 
         view = TourneyManager(ctx)
         view.add_item(QuotientView.tricky_invite_button())
@@ -136,10 +132,7 @@ class ScrimManager(Cog, name="Esports"):
         count = await EasyTag.filter(guild_id=ctx.guild.id).count()
         guild = await Guild.get(guild_id=ctx.guild.id)
 
-        if count == 1 and not guild.is_premium:
-            return await ctx.error(
-                f"Upgrade your server to Quotient Premium to setup more than 1 EasyTag channel.\n[Click Me to Purchase]({self.bot.prime_link})"
-            )
+        # Removed premium restriction - unlimited EasyTag channels for everyone
 
         if channel.id in self.bot.cache.eztagchannels:
             return await ctx.error(f"This channel is already a easy tag channel.")
@@ -253,10 +246,7 @@ class ScrimManager(Cog, name="Esports"):
         count = await TagCheck.filter(guild_id=ctx.guild.id).count()
         guild = await Guild.get(guild_id=ctx.guild.id)
 
-        if count == 1 and not guild.is_premium:
-            return await ctx.error(
-                f"Upgrade your server to Quotient Premium to setup more than 1 Tagcheck channel.\n[Click Me to Purchase]({self.bot.prime_link})"
-            )
+        # Removed premium restriction - unlimited TagCheck channels for everyone
 
         if channel.id in self.bot.cache.tagcheck:
             return await ctx.error(f"This channel is already a tagcheck channel.")

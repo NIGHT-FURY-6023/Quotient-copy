@@ -68,7 +68,7 @@ class Scrim(BaseDbModel):
     match_time = fields.DatetimeField(null=True)
 
     emojis = fields.JSONField(default=dict)  #!new
-    cdn = fields.JSONField(default={"status": False, "countdown": 3, "msg": {}})  #!new
+    cdn = fields.JSONField(default=lambda: {"status": False, "countdown": 3, "msg": {}})  #!new
 
     required_lines = fields.SmallIntField(default=0)
     allow_duplicate_tags = fields.BooleanField(default=True)

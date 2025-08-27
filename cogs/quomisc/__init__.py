@@ -142,13 +142,13 @@ class Quomisc(Cog, name="quomisc"):
     @staticmethod
     def format_commit(commit):  # source: R danny
         short, _, _ = commit.message.partition("\n")
-        short_sha2 = commit.hex[0:6]
+        short_sha2 = str(commit.id)[:6]
         commit_tz = timezone(timedelta(minutes=commit.commit_time_offset))
         commit_time = datetime.fromtimestamp(commit.commit_time).astimezone(commit_tz)
 
         # [`hash`](url) message (offset)
         offset = format_relative(commit_time.astimezone(timezone.utc))
-        return f"[`{short_sha2}`](https://github.com/quotientbot/Quotient-Bot/commit/{commit.hex}) {truncate_string(short,40)} ({offset})"
+        return f"[`{short_sha2}`](https://github.com/quotientbot/Quotient-Bot/commit/{commit.id}) {truncate_string(short,40)} ({offset})"
 
     def get_last_commits(self, count=3):
         repo = pygit2.Repository(".git")
@@ -212,8 +212,38 @@ class Quomisc(Cog, name="quomisc"):
 
     @commands.command()
     async def ping(self, ctx: Context):
-        """Check how the bot is doing"""
-        await ctx.send(f"Bot: `{round(self.bot.latency*1000, 2)} ms`, Database: `{await self.bot.db_latency}`")
+        """Check the bot's connection latency and health status"""
+        # First message with loading indicator
+        msg = await ctx.send("🔍 Checking latency...")
+        
+        # Get all latencies
+        bot_latency = round(self.bot.latency * 1000, 2)
+        db_latency = await self.bot.db_latency
+        api_latency = round((msg.created_at - ctx.message.created_at).total_seconds() * 1000, 2)
+
+        # Get status indicators based on latency
+        def get_status(value):
+            try:
+                if isinstance(value, str):
+                    return "�"  # Error state
+                value = float(str(value).split()[0])  # Handle "123.45 ms" format
+                return "🟢" if value < 200 else "🟡" if value < 400 else "🔴"
+            except:
+                return "🔴"
+
+        # Create embed with fancy formatting
+        embed = discord.Embed(
+            title="🏓 Pong! Bot Status",
+            color=ctx.bot.color,
+            description="```ml\n"
+                       f"WebSocket : {bot_latency:>4} ms {get_status(bot_latency)}\n"
+                       f"Database  : {db_latency:<10} {get_status(db_latency)}\n"
+                       f"API       : {api_latency:>4} ms {get_status(api_latency)}\n"
+                       "```"
+        )
+        
+        embed.set_footer(text=f"Shard ID: {ctx.guild.shard_id if ctx.guild else 0}")
+        await msg.edit(content=None, embed=embed)
 
     @commands.command()
     async def voteremind(self, ctx: Context):

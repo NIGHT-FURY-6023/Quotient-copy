@@ -60,13 +60,7 @@ class TourneyManager(EsportsBaseView):
     @discord.ui.button(style=ButtonStyle.blurple, label="Create Tournament")
     async def create_tournament(self, interaction: discord.Interaction, button: discord.Button):
         await interaction.response.defer()
-        if not await self.ctx.is_premium_guild():
-            if await Tourney.filter(guild_id=self.ctx.guild.id).count() >= 1:
-                return await self.ctx.error(
-                    f"You need [Quotient Premium](https://quotientbot.xyz/premium) to create more than one tournament.\n"
-                    "\nBuy Prime for just ₹29 here: https://quotientbot.xyz/premium",
-                    7,
-                )
+        # Removed premium restriction - unlimited tournaments for everyone
 
         self.stop()
         _v = TourneySetupWizard(self.ctx)

@@ -5,13 +5,14 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable
 
 import discord
+from discord.ext import commands
 
 from core.Context import Context
 
 from .cache import CacheManager
 from .Cog import Cog
 
-__all__ = ("right_bot_check", "event_bot_check", "role_command_check")
+__all__ = ("right_bot_check", "event_bot_check", "role_command_check", "support_server_only")
 
 
 class right_bot_check:
@@ -90,4 +91,45 @@ class role_command_check:
 
             return await fn(*args, **kwargs)
 
+        return wrapper
+
+
+class support_server_only:
+    """A decorator that checks if the user is in the support server.
+    If not, they will be prompted to join it."""
+    
+    def __call__(self, func: Callable) -> Callable:
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any):
+            if isinstance(args[0], commands.Context):
+                ctx = args[0]
+                assert isinstance(ctx, Context)
+                
+                # Bot owner bypass
+                if await ctx.bot.is_owner(ctx.author):
+                    return await func(*args, **kwargs)
+                
+                # Get support server
+                support_guild = ctx.bot.get_guild(ctx.bot.config.SERVER_ID)
+                if not support_guild:
+                    await ctx.send(
+                        f"❌ I was unable to find the support server. Please report this to the developers.\n"
+                        f"Support Server Link: {ctx.bot.config.SERVER_LINK}"
+                    )
+                    return
+                
+                # Check if user is in support server
+                if not support_guild.get_member(ctx.author.id):
+                    embed = discord.Embed(
+                        color=discord.Color.red(),
+                        title="Not in Support Server",
+                        description=(
+                            f"You need to join our support server to use my commands.\n\n"
+                            f"[Click here to join]({ctx.bot.config.SERVER_LINK})"
+                        )
+                    )
+                    await ctx.send(embed=embed)
+                    return
+                
+            return await func(*args, **kwargs)
         return wrapper
