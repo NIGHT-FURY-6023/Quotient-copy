@@ -52,6 +52,33 @@ class PremiumCog(Cog, name="Premium"):
                 "premium_notified": False
             }
         )
+        
+        # Set up expiry timer
+        await self.bot.reminders.create_timer(
+            expire_time,
+            "user_premium",
+            user_id=user.id
+        )
+        
+        # Add premium role if in support server
+        if isinstance(ctx.guild, discord.Guild) and ctx.guild.id == self.bot.config.SERVER_ID:
+            member = ctx.guild.get_member(user.id)
+            if member:
+                try:
+                    await member.add_roles(discord.Object(id=self.premium_role_id))
+                except discord.HTTPException:
+                    pass
+            
+        await ctx.success(f"Granted premium to {user.mention} until {discord_timestamp(expire_time)}")
+        
+        try:
+            await user.send(
+                f"🎉 You have been granted Quotient Premium by {ctx.author.mention}!\n"
+                f"Your premium will expire on: {discord_timestamp(expire_time)}\n"
+                f"Join our support server to get the premium role: {self.bot.config.SERVER_LINK if hasattr(self.bot, 'config') else 'https://discord.gg/quotient'}"
+            )
+        except discord.HTTPException:
+            pass
 
 
 async def setup(bot: Quotient):
@@ -63,33 +90,6 @@ async def setup(bot: Quotient):
     
     # Add cog
     await bot.add_cog(PremiumCog(bot))
-    
-    # Set up expiry timer
-    await self.bot.reminders.create_timer(
-        expire_time,
-        "user_premium",
-        user_id=user.id
-    )
-    
-    # Add premium role if in support server
-    if isinstance(ctx.guild, discord.Guild) and ctx.guild.id == self.bot.config.SERVER_ID:
-        member = ctx.guild.get_member(user.id)
-        if member:
-                try:
-                    await member.add_roles(discord.Object(id=self.premium_role_id))
-                except discord.HTTPException:
-                    pass
-        
-        await ctx.success(f"Granted premium to {user.mention} until {discord_timestamp(expire_time)}")
-        
-        try:
-            await user.send(
-                f"🎉 You have been granted Quotient Premium by {ctx.author.mention}!\n"
-                f"Your premium will expire on: {discord_timestamp(expire_time)}\n"
-                f"Join our support server to get the premium role: {self.bot.config.SERVER_LINK if hasattr(self.bot, 'config') else 'https://discord.gg/quotient'}"
-            )
-        except discord.HTTPException:
-            pass
 
     @commands.command()
     @commands.bot_has_permissions(embed_links=True)
